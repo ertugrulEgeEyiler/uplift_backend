@@ -7,8 +7,12 @@ app.use(cors());
 app.use(express.json());
 
 const authRoutes = require("./routes/auth");
+const therapistRoutes = require("./routes/therapist")
+const adminRoutes = require("./routes/admin")
 
 app.use("/api/auth", authRoutes);
+app.use("/api/therapists", therapistRoutes)
+app.use("/api/admin", adminRoutes)
 
 
 

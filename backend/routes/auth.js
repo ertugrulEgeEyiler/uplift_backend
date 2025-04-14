@@ -6,6 +6,8 @@ const bcyrpt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const cyrpto = require('crypto');
+const authMiddleware = require('../middlewares/authMiddleware')
+const authorizeRoles = require('../middlewares/authorizeRoles');
 
 // User registration
 router.post('/register', async (req, res) => {
@@ -79,7 +81,7 @@ router.post('/login', async (req, res) => {
 
         //Create token.
         const token = jwt.sign(
-            { id: user._id, role: "patient" },
+            { id: user._id, role: user.role },
             "jwt_secret_key",
             { expiresIn: "1d" }
         );
@@ -176,6 +178,15 @@ router.post('/reset-password', async (req, res) => {
         res.status(500).json({ message: 'Server Error!' })
     }
 })
-    
+
+// Token authentication for restricted usage of app
+router.get('/protected', authMiddleware, (req, res) => {
+    res.status(200).json({ message: `Welcome, user ${req.user.id}` })
+});
+
+// Protected role route for testing
+router.get('/only-patient', authMiddleware, authorizeRoles('patient'), (req, res) => {
+    res.status(200).json({ message: `Welcome patient ${req.user.id}` });
+})
 
 module.exports = router;
