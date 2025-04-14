@@ -1,6 +1,0 @@
-express
-mongoose
-cors
-bcyrptjs
-jsonwebtoken
-nodemailer
