@@ -33,6 +33,10 @@ router.post('/therapists-approve/:id', authMiddleware, authorizeRoles('admin'), 
         await user.save();
 
         res.status(200).json({ message: 'Therapist application approved successfully.' })
+        
+        application.rejected = false;
+        await application.save();
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

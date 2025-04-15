@@ -4,3 +4,4 @@ cors
 bcyrptjs
 jsonwebtoken
 nodemailer
+multer

@@ -2,12 +2,29 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const TherapistApplication = require('../models/TherapistApplication');
+const upload = require('../middlewares/upload');
+const User = require('../models/User');
+
 
 // Therapist application
-router.post('/apply', authMiddleware, async (req, res) => {
+router.post('/apply', upload.single('certificate'), authMiddleware, async (req, res) => {
     try {
-        const { specialization, licenseNumber, description } = req.body;
+        const {
+            age,
+            gender,
+            specialization,
+            languages,
+            licenseNumber,
+            description,
+            city,
+            country,
+            sessionCost,
+        } = req.body;
 
+        const certificateUrl = req.file ? req.file.filename : null;
+        
+        const existingUser = await User.findById(req.user.id);
+        
         const existingApplication = await TherapistApplication.findOne({ user: req.user.id, approved: false, rejected: false });
 
         if (existingApplication) {
@@ -16,9 +33,18 @@ router.post('/apply', authMiddleware, async (req, res) => {
 
         const application = new TherapistApplication({
             user: req.user.id,
-            specialization,
+            age: existingUser.age || req.body.age,
+            gender: existingUser.gender || req.body.gender,
+            specialization: specialization.split(','),
+            languages: existingUser.languages,
             licenseNumber,
-            description
+            description: existingUser.description || req.body.description,
+            location: existingUser.location || {
+                city: req.body.city,
+                country: req.body.country,
+            },
+            sessionCost,
+            certificateUrl,
         });
 
         await application.save();
