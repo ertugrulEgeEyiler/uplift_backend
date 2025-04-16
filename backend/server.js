@@ -9,10 +9,13 @@ app.use(express.json());
 const authRoutes = require("./routes/auth");
 const therapistRoutes = require("./routes/therapist")
 const adminRoutes = require("./routes/admin")
+const userRoutes = require("./routes/user")
 
 app.use("/api/auth", authRoutes);
-app.use("/api/therapists", therapistRoutes)
-app.use("/api/admin", adminRoutes)
+app.use("/api/therapists", therapistRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/users", userRoutes);
+app.use('/uploads', express.static('uploads'));
 
 
 
