@@ -56,4 +56,14 @@ router.post('/apply', upload.single('certificate'), authMiddleware, async (req, 
     }
 });
 
+router.get('/list', async (req, res) => {
+    try {
+        const therapists = await User.find({ role: 'therapist' }, '_id username');
+        res.status(200).json(therapists);
+    } catch (err) {
+        console.error('Therapist list fetch error:', err);
+        res.status(500).json({ message: 'Server Error!' });
+    }
+});
+
 module.exports = router;

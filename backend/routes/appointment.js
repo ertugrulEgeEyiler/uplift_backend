@@ -14,29 +14,53 @@ router.post('/', authMiddleware, async (req, res) => {
             type,
         } = req.body;
 
+        console.log('📥 Gelen randevu isteği:', {
+            therapistId,
+            date,
+            startTime,
+            endTime,
+            type
+        });
+
         if (req.user.role !== 'patient') {
             return res.status(403).json({ message: 'Only patients can book appointments.' });
         }
 
+        // 🔍 Availability eşleşmesi (sadece gün karşılaştırması)
         const availableSlot = await Availability.findOne({
             therapist: therapistId,
-            date: new Date(date),
-            startTime,
-            endTime,
             isBlocked: false,
+            startTime: startTime.trim(),
+            endTime: endTime.trim(),
+            $expr: {
+                $eq: [
+                    { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+                    date
+                ]
+            }
         });
+
+        console.log('🔎 Availability bulunan:', availableSlot);
 
         if (!availableSlot) {
-            return res.status(400).json({ message: 'Selected time slot is busy.' })
+            return res.status(400).json({ message: 'Selected time slot is busy.' });
         }
 
+        // ❌ Çakışma kontrolü (iptal olmayan başka randevu varsa)
         const conflict = await Appointment.findOne({
             therapist: therapistId,
-            date: new Date(date),
-            startTime,
-            endTime,
             status: { $ne: 'cancelled' },
+            startTime: startTime.trim(),
+            endTime: endTime.trim(),
+            $expr: {
+                $eq: [
+                    { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+                    date
+                ]
+            }
         });
+
+        console.log('⛔ Çakışma:', conflict);
 
         if (conflict) {
             return res.status(409).json({ message: 'This time slot is already booked.' });
@@ -55,7 +79,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
         res.status(201).json({ message: 'Appointment request submitted.', appointment: newAppointment });
     } catch (error) {
-        console.error('Appointment Error!', error);
+        console.error('💥 Appointment Error!', error);
         res.status(500).json({ message: 'Server Error!' });
     }
 });
@@ -110,7 +134,7 @@ router.get('/my', authMiddleware, async (req, res) => {
             .populate('therapist', 'username email')
             .sort({ date: 1, startTime: 1 });
 
-            res.status(200).json(appointments);
+        res.status(200).json(appointments);
     } catch (error) {
         console.error('My appointments error: ', error);
         res.status(500).json({ message: 'Server Error!' });
@@ -152,6 +176,6 @@ router.put('/:id/cancel', authMiddleware, async (req, res) => {
         console.error("Cancel error:", error);
         res.status(500).json({ message: 'Server Error!' });
     }
-})
+});
 
 module.exports = router;
