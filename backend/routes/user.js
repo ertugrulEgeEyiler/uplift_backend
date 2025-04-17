@@ -32,4 +32,21 @@ router.put('/update-profile', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/me', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        res.status(200).json({
+            id: user._id,
+            name: user.username,
+            role: user.role,
+            email: user.email,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 module.exports = router;
