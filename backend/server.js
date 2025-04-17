@@ -7,14 +7,20 @@ app.use(cors());
 app.use(express.json());
 
 const authRoutes = require("./routes/auth");
-const therapistRoutes = require("./routes/therapist")
-const adminRoutes = require("./routes/admin")
-const userRoutes = require("./routes/user")
+const therapistRoutes = require("./routes/therapist");
+const adminRoutes = require("./routes/admin");
+const userRoutes = require("./routes/user");
+const searchRoutes = require("./routes/search");
+const availabilityRoutes = require("./routes/availability");
+const appointmentRoutes = require("./routes/appointment");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/therapists", therapistRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/search", searchRoutes);
+app.use("/api/availability", availabilityRoutes);
+app.use("/api/appointments", appointmentRoutes);
 app.use('/uploads', express.static('uploads'));
 
 
