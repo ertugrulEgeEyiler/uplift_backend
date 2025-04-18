@@ -5,3 +5,4 @@ bcyrptjs
 jsonwebtoken
 nodemailer
 multer
+npm install express stripe dotenv cors
