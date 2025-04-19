@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const app = express();
+require("dotenv").config();
 
 app.use(cors());
 app.use(express.json());
@@ -13,6 +14,7 @@ const userRoutes = require("./routes/user");
 const searchRoutes = require("./routes/search");
 const availabilityRoutes = require("./routes/availability");
 const appointmentRoutes = require("./routes/appointment");
+const paymentRoutes = require('./routes/payment');
 
 app.use("/api/auth", authRoutes);
 app.use("/api/therapists", therapistRoutes);
@@ -22,6 +24,7 @@ app.use("/api/search", searchRoutes);
 app.use("/api/availability", availabilityRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use('/uploads', express.static('uploads'));
+app.use('/api/payments', paymentRoutes);
 
 
 

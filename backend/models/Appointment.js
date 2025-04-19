@@ -8,7 +8,9 @@ const AppointmentSchema = new mongoose.Schema({
     endTime: { type: String, required: true },
     type: { type: String, enum: ['in_person', 'virtual'], required: true },
     status: { type: String, enum: ['pending', 'confirmed', 'cancelled', 'completed'], default: 'pending' },
-    jitsiRoom: { type: String }
+    jitsiRoom: { type: String },
+    amount: { type: Number, default: 500 }, // ₺ cinsinden ücret
+    isPaid: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Appointment', AppointmentSchema);
