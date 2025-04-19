@@ -1,43 +1,148 @@
 const express = require('express');
 const router = express.Router();
-require('dotenv').config();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const authMiddleware = require('../middlewares/authMiddleware');
+const Slot = require('../models/Slot');
 const Appointment = require('../models/Appointment');
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Stripe ödeme intent oluşturma
-router.post('/create-payment-intent', async (req, res) => {
+// Create Stripe checkout session for slot booking
+router.post('/book/:slotId', authMiddleware, async (req, res) => {
   try {
-    const { amount } = req.body;
+    const slot = await Slot.findById(req.params.slotId);
+    if (!slot || slot.status !== 'available') {
+      return res.status(404).json({ message: 'Slot not available' });
+    }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount * 100, // kuruş cinsinden
-      currency: 'try',
+    if (slot.therapist.toString() === req.user.id) {
+      return res.status(403).json({ message: 'You cannot book your own slot' });
+    }
+
+    const existingCount = await Appointment.countDocuments({ slot: slot._id, status: 'booked' });
+    if (existingCount >= slot.maxParticipants) {
+      return res.status(400).json({ message: 'Slot is already full' });
+    }
+
+    const alreadyBooked = await Appointment.findOne({
+      slot: slot._id,
+      patient: req.user.id,
+      status: 'booked'
+    });
+    if (alreadyBooked) {
+      return res.status(400).json({ message: 'You have already booked this slot' });
+    }
+
+    const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Therapy session with ${slot.type}`,
+            },
+            unit_amount: slot.price * 100
+          },
+          quantity: 1
+        }
+      ],
+      success_url: process.env.CLIENT_URL + `/payment-success?session_id={CHECKOUT_SESSION_ID}&slotId=` + slot._id,
+      cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,
+      metadata: {
+        slotId: slot._id.toString(),
+        therapistId: slot.therapist.toString(),
+        patientId: req.user.id
+      }
     });
 
-    res.send({ clientSecret: paymentIntent.client_secret });
+    res.status(200).json({ url: session.url });
   } catch (error) {
-    console.error('Stripe Error:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('Stripe session error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Ödeme başarıyla tamamlandıktan sonra randevuyu isPaid:true yap
-router.post('/confirm-payment', async (req, res) => {
+// Confirm booking after successful payment
+router.post('/confirm', authMiddleware, async (req, res) => {
   try {
-    const { appointmentId } = req.body;
-    const updated = await Appointment.findByIdAndUpdate(
-      appointmentId,
-      { isPaid: true },
-      { new: true }
-    );
+    const { slotId, sessionId } = req.body;
 
-    if (!updated) return res.status(404).json({ message: 'Appointment not found' });
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (!session || session.payment_status !== 'paid') {
+      return res.status(400).json({ message: 'Payment not confirmed.' });
+    }
 
-    res.status(200).json({ message: 'Payment confirmed' });
-  } catch (err) {
-    console.error('Confirm payment error:', err);
+    const paymentIntentId = session.payment_intent;
+    if (!paymentIntentId) {
+      return res.status(400).json({ message: 'PaymentIntent not found in session.' });
+    }
+
+    const slot = await Slot.findById(slotId);
+    if (!slot || slot.status !== 'available') {
+      return res.status(404).json({ message: 'Slot not available' });
+    }
+
+    const currentCount = await Appointment.countDocuments({ slot: slot._id, status: 'booked' });
+    if (currentCount >= slot.maxParticipants) {
+      return res.status(400).json({ message: 'Slot is full' });
+    }
+
+    const appointment = new Appointment({
+      slot: slot._id,
+      therapist: slot.therapist,
+      patient: req.user.id,
+      isPaid: true,
+      status: 'booked',
+      paymentIntentId: paymentIntentId
+    });
+
+    await appointment.save();
+
+    res.status(201).json({ message: 'Appointment booked successfully', appointment, isBookable: currentCount + 1 < slot.maxParticipants });
+  } catch (error) {
+    console.error('Confirm payment error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/refund/:appointmentId', authMiddleware, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.appointmentId).populate('slot');
+    if (!appointment || appointment.status !== 'booked') {
+      return res.status(400).json({ message: 'Appointment not found or not refundable' });
+    }
+
+    const slot = appointment.slot;
+    const now = new Date();
+    const slotDateTime = new Date(`${slot.date.toISOString().split('T')[0]}T${slot.startTime}:00`);
+    const hoursBefore = (slotDateTime - now) / (1000 * 60 * 60);
+
+    const isPatient = appointment.patient.toString() === req.user.id;
+    const isTherapist = appointment.therapist.toString() === req.user.id;
+
+    if (!isPatient && !isTherapist) {
+      return res.status(403).json({ message: 'You are not authorized to cancel this appointment' });
+    }
+
+    if (isPatient && hoursBefore < 48) {
+      return res.status(403).json({ message: 'Patients can only cancel at least 48h in advance' });
+    }
+
+    const refund = await stripe.refunds.create({
+      payment_intent: appointment.paymentIntentId
+    });
+
+    appointment.status = 'refunded';
+    await appointment.save();
+
+    const bookedCount = await Appointment.countDocuments({ slot: slot._id, status: 'booked' });
+    const isBookable = bookedCount < slot.maxParticipants;
+
+    res.status(200).json({ message: 'Appointment refunded and cancelled', refund, isBookable });
+  } catch (error) {
+    console.error('Refund error:', error);
+    res.status(500).json({ message: 'Refund failed' });
   }
 });
 
