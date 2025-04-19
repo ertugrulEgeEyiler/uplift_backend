@@ -10,7 +10,6 @@ const TherapistApplicationSchema = new mongoose.Schema({
         city: { type: String },
         country: { type: String },
     },
-    sessionCost: { type: Number },
     licenseNumber: { type: String, required: true },
     description: { type: String },
     certificateUrl: { type: String },

@@ -18,7 +18,6 @@ router.post('/apply', upload.single('certificate'), authMiddleware, async (req, 
             description,
             city,
             country,
-            sessionCost,
         } = req.body;
 
         const certificateUrl = req.file ? req.file.filename : null;
@@ -43,7 +42,6 @@ router.post('/apply', upload.single('certificate'), authMiddleware, async (req, 
                 city: req.body.city,
                 country: req.body.country,
             },
-            sessionCost,
             certificateUrl,
         });
 
@@ -63,7 +61,6 @@ router.get('/list', async (req, res) => {
         _id: app.user._id,
         username: app.user.username,
         specialization: app.specialization,
-        sessionCost: app.sessionCost,
         languages: app.languages,
         location: app.location,
       }));
@@ -83,7 +80,6 @@ router.get('/profile/:id', async (req, res) => {
       const combined = {
         ...application.user.toObject(),
         specialization: application.specialization,
-        sessionCost: application.sessionCost,
         description: application.description,
         languages: application.languages,
         location: application.location,
