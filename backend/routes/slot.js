@@ -115,5 +115,23 @@ router.get('/my', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.get('/therapist/:id', async (req, res) => {
+  try {
+    const slots = await Slot.find({ therapist: req.params.id });
+
+    const formatted = slots.map(slot => ({
+      title: slot.status === 'booked' ? 'Booked Appointment' : 'Available Slot',
+      start: new Date(`${slot.date.toISOString().split('T')[0]}T${slot.startTime}:00`),
+      end: new Date(`${slot.date.toISOString().split('T')[0]}T${slot.endTime}:00`),
+      status: slot.status // 👈 bunu ekliyoruz ki frontend kontrol edebilsin
+    }));
+
+    res.status(200).json(formatted);
+  } catch (error) {
+    console.error('Therapist slots fetch error:', error);
+    res.status(500).json({ message: 'Server Error!' });
+  }
+});
+
 
 module.exports = router;
