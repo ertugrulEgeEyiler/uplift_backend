@@ -90,5 +90,24 @@ router.get('/slot/:slotId', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.get('/therapist/:id', async (req, res) => {
+  try {
+    const appointments = await Appointment.find({ therapist: req.params.id })
+      .populate('patient', 'username'); // Bunu ekledik
+
+    const formatted = appointments.map(app => ({
+      id: app._id,
+      title: `Appointment with ${app.patient?.username || 'Unknown'}`,
+      start: app.start,
+      end: app.end,
+    }));
+
+    res.status(200).json(formatted);
+  } catch (err) {
+    console.error('Appointments fetch error:', err);
+    res.status(500).json({ message: 'Server Error!' });
+  }
+});
+
 
 module.exports = router;
