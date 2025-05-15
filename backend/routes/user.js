@@ -89,4 +89,58 @@ router.put('/change-password', authMiddleware, async (req, res) => {
   }
 });
 
+
+
+
+// ---------------Burayı İncele Ertuğ-------------------
+// backend/routes/user.js dosyasına ekleyiniz
+// Belirli bir kullanıcının profil bilgilerini getir
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -verificationToken');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error!' });
+  }
+});
+
+// Kullanıcı detaylarını ve ilişkili verileri getir
+router.get('/:id/details', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId).select('-password -verificationToken');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Kullanıcının rolüne göre ek bilgileri getir
+    let additionalData = {};
+    
+    if (user.role === 'patient') {
+      // Hasta için randevuları, kaydedilen terapistleri vs. getir
+      // Bu bölüm projenizin ihtiyaçlarına göre özelleştirilebilir
+    } 
+    else if (user.role === 'therapist') {
+      // Terapist için profil bilgilerini, değerlendirmeleri vs. getir
+      const therapistDetails = await TherapistApplication.findOne({ user: userId, approved: true });
+      additionalData = { therapistDetails };
+    }
+    
+    res.status(200).json({
+      user,
+      ...additionalData
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error!' });
+  }
+});
+
 module.exports = router;
