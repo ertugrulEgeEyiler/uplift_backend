@@ -16,7 +16,9 @@ const searchRoutes = require("./routes/search");
 const slotRoutes = require("./routes/slot");
 const appointmentRoutes = require("./routes/appointment");
 const paymentRoutes = require('./routes/payment');
+const progressRoutes = require('./routes/progress');
 
+app.use('/api/progress', progressRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/therapists", therapistRoutes);
 app.use("/api/admin", adminRoutes);
