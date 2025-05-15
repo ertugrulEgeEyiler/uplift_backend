@@ -40,5 +40,5 @@ mongoose
   .catch((err) => console.log("MongoDB Bağlantı Hatası:", err));
 
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`🚀 Server ${PORT} portunda çalışıyor...`));
