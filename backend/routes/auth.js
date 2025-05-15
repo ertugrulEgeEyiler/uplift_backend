@@ -41,7 +41,7 @@ router.post('/register', async (req, res) => {
             },
         });
 
-        const verifyUrl = `http://localhost:5000/api/auth/verify?token=${verificationToken}`;
+        const verifyUrl = `http://localhost:5001/api/auth/verify?token=${verificationToken}`;
 
         await transporter.sendMail({
             from: '"Uplift Support" <seninmail@gmail.com>',
@@ -138,7 +138,7 @@ router.post('/forgot-password', async (req, res) => {
             },
           });
 
-          const resetUrl = `http://localhost:5000/reset-password?token=${resetToken}`;
+          const resetUrl = `http://localhost:5001/reset-password?token=${resetToken}`;
 
           await transporter.sendMail({
             from: '"Uplift Support" <seninmail@gmail.com>',
@@ -188,5 +188,120 @@ router.get('/protected', authMiddleware, (req, res) => {
 router.get('/only-patient', authMiddleware, authorizeRoles('patient'), (req, res) => {
     res.status(200).json({ message: `Welcome patient ${req.user.id}` });
 })
+router.get('/callback/google', async (req, res) => {
+  try {
+    const { code } = req.query;
 
+    if (!code) {
+      return res.status(400).json({ message: 'No code provided' });
+    }
+
+    // 1. Google'dan access_token alıyoruz
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: 'http://localhost:5000/api/auth/callback/google',
+      grant_type: 'authorization_code',
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const { access_token } = tokenResponse.data;
+
+    // 2. Access token ile kullanıcı bilgilerini çekiyoruz
+    const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const { email, name } = userInfoResponse.data;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({
+        username: name,
+        email,
+        password: '', // Google signup olduğu için password boş
+        isVerified: true, // Google signup olduğu için verified = true
+      });
+      await user.save();
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    // Burada frontend'e yönlendirme yapıyoruz
+    res.redirect(`http://localhost:3000/auth/login?token=${token}`);
+  } catch (error) {
+    console.error('Google login/signup error:', error.response?.data || error.message);
+    res.status(500).json({ message: 'Google login/signup failed' });
+  }
+});
+
+router.post('/google-login', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ message: 'No credential provided' });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    if (!email || !name) {
+      return res.status(400).json({ message: 'Google data incomplete' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Kullanıcı yoksa: yeni oluştur (dummy password ile)
+      const dummyPassword = email + '_uplift';
+      const hashedPassword = await bcrypt.hash(dummyPassword, 10);
+
+      user = new User({
+        username: name,
+        email,
+        password: hashedPassword,
+        role: 'patient',
+        isVerified: true,
+      });
+
+      await user.save();
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({ message: 'Google login/signup failed' });
+  }
+});
 module.exports = router;

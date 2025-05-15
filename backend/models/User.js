@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
     country: { type: String },
   },
   languages: [{ type: String }],
-  role: { type: String, enum: ['user', 'patient', 'therapist', 'admin'], default: 'user' },
+  role: { type: String, enum: ['user', 'patient', 'therapist', 'admin'], default: 'patient' },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
 }, { timestamps: true });

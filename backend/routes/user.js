@@ -89,12 +89,6 @@ router.put('/change-password', authMiddleware, async (req, res) => {
   }
 });
 
-
-
-
-// ---------------Burayı İncele Ertuğ-------------------
-// backend/routes/user.js dosyasına ekleyiniz
-// Belirli bir kullanıcının profil bilgilerini getir
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password -verificationToken');

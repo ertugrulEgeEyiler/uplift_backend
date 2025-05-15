@@ -6,10 +6,14 @@ const Progress = require('../models/Progress');
 // Get progress data for user
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const progress = await Progress.findOne({ user: req.user.id });
+    let progress = await Progress.findOne({ user: req.user.id });
+    
+    // ✨ Eğer progress yoksa otomatik oluştur
     if (!progress) {
-      return res.status(404).json({ message: 'No progress data found' });
+      progress = new Progress({ user: req.user.id });
+      await progress.save();
     }
+
     res.status(200).json(progress);
   } catch (error) {
     console.error('Get progress error:', error);
