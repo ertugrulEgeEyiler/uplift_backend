@@ -4,6 +4,7 @@ cors
 bcyrptjs
 jsonwebtoken
 nodemailer
+node-cron
 multer
 stripe
 dotenv
