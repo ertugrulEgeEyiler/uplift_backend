@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const app = express();
 require('dotenv').config();
+require('./cron/reminderJob');
 
 app.use(cors());
 app.use(express.json());

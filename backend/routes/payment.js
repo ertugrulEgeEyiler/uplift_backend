@@ -88,18 +88,21 @@ router.post('/confirm', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Slot is full' });
     }
 
+    const jitsiRoom = `uplift_${slot._id}_${Date.now()}`;
+
     const appointment = new Appointment({
       slot: slot._id,
       therapist: slot.therapist,
       patient: req.user.id,
       isPaid: true,
       status: 'booked',
-      paymentIntentId: paymentIntentId
+      paymentIntentId: paymentIntentId,
+      jitsiRoom: jitsiRoom
     });
 
     await appointment.save();
 
-    res.status(201).json({ message: 'Appointment booked successfully', appointment, isBookable: currentCount + 1 < slot.maxParticipants });
+    res.status(201).json({ message: 'Appointment booked successfully', appointment, jitsiLink: `https://meet.jit.si/${jitsiRoom}`, isBookable: currentCount + 1 < slot.maxParticipants  });
   } catch (error) {
     console.error('Confirm payment error:', error);
     res.status(500).json({ message: 'Server error' });
