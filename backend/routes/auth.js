@@ -2,59 +2,55 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { error } = require('console');
-const bcyrpt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const cyrpto = require('crypto');
 const authMiddleware = require('../middlewares/authMiddleware')
 const authorizeRoles = require('../middlewares/authorizeRoles');
-
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // User registration
 router.post('/register', async (req, res) => {
-    try {
-        const { username, email, password } = req.body;
+  try {
+    const { username, email, password } = req.body;
 
-        // Hash password.
-        const salt = await bcyrpt.genSalt(10);
-        const hashedPassword = await bcyrpt.hash(password, salt);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create email verification token.
-        const verificationToken = cyrpto.randomBytes(32).toString('hex');
+    const verificationToken = crypto.randomBytes(32).toString('hex');
 
-        // Create new user.
-        const newUser = new User({
-            username,
-            email,
-            password: hashedPassword,
-            verificationToken,
-        });
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      verificationToken,
+    });
 
-        // Save user.
-        await newUser.save();
+    await newUser.save();
 
-        // Send email.
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: 'upliftmailservice@gmail.com',
-                pass: 'usgj tigk wheb ughg',
-            },
-        });
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'upliftmailservice@gmail.com',
+        pass: 'usgj tigk wheb ughg',
+      },
+    });
 
-        const verifyUrl = `http://localhost:5001/api/auth/verify?token=${verificationToken}`;
+    const verifyUrl = `http://localhost:5000/api/auth/verify?token=${verificationToken}`;
 
-        await transporter.sendMail({
-            from: '"Uplift Support" <seninmail@gmail.com>',
-            to: email,
-            subject: 'Verify Your Email',
-            html: `<h1>Verify Your Email</h1><p>Click the link to verify your email:</p><a href="${verifyUrl}">${verifyUrl}</a>`,
-        });
+    await transporter.sendMail({
+      from: '"Uplift Support" <upliftmailservice@gmail.com>',
+      to: email,
+      subject: 'Verify Your Email',
+      html: `<h1>Verify Your Email</h1><p>Click the link to verify your email:</p><a href="${verifyUrl}">${verifyUrl}</a>`,
+    });
 
-        res.status(201).json({ message: 'User has been created.' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error!' });
-    }
+    res.status(201).json({ message: 'User has been created.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error!' });
+  }
 });
 
 // User login
@@ -74,7 +70,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Control password.
-        const isMatch = await bcyrpt.compare(password, user.password);
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid password.' })
         }
@@ -165,8 +161,8 @@ router.post('/reset-password', async (req, res) => {
         }
 
         // Hash the new password.
-        const salt = await bcyrpt.genSalt(10);
-        const hashedPassword = await bcyrpt.hash(newPassword, salt);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
 
         user.password = hashedPassword;
         user.verificationToken = undefined;
