@@ -108,6 +108,16 @@ router.get('/therapist/:id', async (req, res) => {
     res.status(500).json({ message: 'Server Error!' });
   }
 });
+router.get('/patient/:id', authMiddleware, async (req, res) => {
+  try {
+    const appointments = await Appointment.find({ patient: req.params.id })
+      .populate('therapist', 'username email')
+      .populate('slot');
+    res.json(appointments);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error', error: err.message });
+  }
+});
 
 
 module.exports = router;
