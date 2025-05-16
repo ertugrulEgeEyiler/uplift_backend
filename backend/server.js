@@ -1,49 +1,40 @@
-const express = require("express");
+// server.js
+const express  = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
-const app = express();
-require('dotenv').config();
-require('./cron/reminderJob');
+const cors     = require("cors");
+const http     = require("http");
+require("dotenv").config();
+require("./cron/reminderJob");
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-const authRoutes = require("./routes/auth");
-const therapistRoutes = require("./routes/therapist");
-const adminRoutes = require("./routes/admin");
-const userRoutes = require("./routes/user");
-const searchRoutes = require("./routes/search");
-const slotRoutes = require("./routes/slot");
-const appointmentRoutes = require("./routes/appointment");
-const paymentRoutes = require('./routes/payment');
-const progressRoutes = require('./routes/progress');
-const ratingRoutes = require('./routes/rating'); // New rating routes
+/* ----------  ROUTES  ---------- */
+app.use("/api/auth",        require("./routes/auth"));
+app.use("/api/therapists",  require("./routes/therapist"));
+app.use("/api/admin",       require("./routes/admin"));
+app.use("/api/users",       require("./routes/user"));
+app.use("/api/search",      require("./routes/search"));
+app.use("/api/slot",        require("./routes/slot"));
+app.use("/api/appointments",require("./routes/appointment"));
+app.use("/api/payment",     require("./routes/payment"));
+app.use("/api/progress",    require("./routes/progress"));
+app.use("/api/ratings",     require("./routes/rating"));
+app.use("/api/chat",        require("./routes/chat"));
+app.use("/uploads", express.static("uploads"));
 
-app.use('/api/progress', progressRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/therapists", therapistRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/search", searchRoutes);
-app.use("/api/slot", slotRoutes);
-app.use("/api/appointments", appointmentRoutes);
-app.use('/uploads', express.static('uploads'));
-app.use('/api/payment', paymentRoutes);
-app.use('/api/ratings', ratingRoutes); // Add rating routes
-
-
-
+/* ----------  DB  ---------- */
 mongoose
-  .connect(
-    "mongodb+srv://ozguryavuz:dQL31cl06tdmdSbQ@database.cepqb1h.mongodb.net/?retryWrites=true&w=majority&appName=Database",
-    {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    }
-  )
-  .then(() => console.log("✅ MongoDB Bağlantısı Başarılı"))
-  .catch((err) => console.log("MongoDB Bağlantı Hatası:", err));
+  .connect(process.env.MONGODB_URI)           // seçeneklere gerek yok
+  .then(() => console.log("✅ MongoDB bağlı"))
+  .catch(err => console.error("Mongo hata:", err));
 
+/* ----------  HTTP + SOCKET.IO  ---------- */
+const server = http.createServer(app);
+require("./socket").initSocket(server);       // aynı server nesnesi
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`🚀 Server ${PORT} portunda çalışıyor...`));
+server.listen(PORT, () => {
+  console.log(`🚀  API & Socket.IO running → http://localhost:${PORT}`);
+});

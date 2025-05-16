@@ -54,24 +54,29 @@ router.post('/apply', upload.single('certificate'), authMiddleware, async (req, 
     }
 });
 
-router.get('/list', async (req, res) => {
-    try {
-      const applications = await TherapistApplication.find({ approved: true }).populate('user');
-      const formatted = applications.map(app => ({
-        _id: app.user._id,
-        username: app.user.username,
-        specialization: app.specialization,
-        languages: app.languages,
-        location: app.location,
-      }));
-      res.status(200).json(formatted);
-    } catch (err) {
-      console.error('Therapist list fetch error:', err);
-      res.status(500).json({ message: 'Server Error!' });
-    }
-  });
-  
+router.get('/list', async (_, res) => {
+  try {
+    const approved = await TherapistApplication
+      .find({ approved:true })
+      .populate('user', 'username email');
 
+    const list = approved.map(app => ({
+      _id:            app.user._id,
+      username:       app.user.username,
+      email:          app.user.email,
+      specialization: app.specialization ?? [],
+      languages:      app.languages      ?? [],
+      location:       app.location       ?? {},
+    }));
+
+    res.json(list);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message:'Server Error' });
+  }
+});
+
+  
 router.get('/profile/:id', async (req, res) => {
     try {
       const application = await TherapistApplication.findOne({ user: req.params.id, approved: true }).populate('user');

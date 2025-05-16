@@ -14,6 +14,7 @@
     "node": "^23.11.0",
     "node-cron": "^4.0.5",
     "nodemailer": "^6.10.0",
+    "socket.io": "^4.8.1",
     "stripe": "^18.0.0"
   },
   "name": "uplift_backend",
