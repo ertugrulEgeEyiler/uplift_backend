@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const Message = require('./models/Message');
 
 let io;
 
@@ -51,33 +52,42 @@ function initSocket(server) {  io = new Server(server, {
     socket.on('leave', conversationId => {
       socket.leave(conversationId);
       console.log(`User ${socket.userId} left conversation ${conversationId}`);
-    });
-
-    socket.on('send-message', (message) => {
+    });    socket.on('send-message', async (message) => {
       console.log('New message received from client:', message);
-      
-      // Broadcast the message to all users in the conversation
-      io.to(message.conversationId).emit('new-message', {
-        ...message,
-        sender: socket.userId,
-        timestamp: new Date(),
-        status: 'sent'
-      });
+      try {
+        const savedMessage = await Message.create({
+          conversation: message.conversationId,
+          sender: socket.userId,
+          text: message.text
+        });
 
-      // Send delivery confirmation back to sender
-      socket.emit('message-status', {
-        conversationId: message.conversationId,
-        status: 'delivered',
-        timestamp: new Date()
-      });
-    });
+        // Broadcast the saved message to all users in the conversation
+        io.to(message.conversationId).emit('new-message', {
+          ...savedMessage.toObject(),
+          status: 'sent'
+        });
 
-    socket.on('message-received', (data) => {
-      // When a client confirms message receipt, broadcast to sender
-      io.to(data.conversationId).emit('message-status', {
+        // Send delivery confirmation back to sender
+        socket.emit('message-status', {
+          messageId: savedMessage._id,
+          status: 'delivered'
+        });
+
+        // Debug log
+        console.log('Message saved and broadcasted:', savedMessage._id);
+      } catch (error) {
+        console.error('Error saving message:', error);
+        socket.emit('message-status', {
+          messageId: message.tempId,
+          status: 'error'
+        });
+      }
+    });    socket.on('message-received', (data) => {
+      console.log('Message received confirmation:', data);
+      // When a client confirms message receipt, emit only to sender
+      socket.to(data.conversationId).emit('message-status', {
         messageId: data.messageId,
-        status: 'delivered',
-        timestamp: new Date()
+        status: 'delivered'
       });
     });
 
