@@ -47,9 +47,9 @@ router.post('/book/:slotId', authMiddleware, async (req, res) => {
           quantity: 1
         }
       ],
-      success_url: process.env.CLIENT_URL + `/payment-success?session_id={CHECKOUT_SESSION_ID}&slotId=` + slot._id,
-      cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,
-      metadata: {
+      success_url: `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?session_id={CHECKOUT_SESSION_ID}&slotId=${slot._id}`,
+      cancel_url: `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-cancel`,
+    metadata: {
         slotId: slot._id.toString(),
         therapistId: slot.therapist.toString(),
         patientId: req.user.id
