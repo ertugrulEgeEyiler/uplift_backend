@@ -5,7 +5,7 @@ const { error } = require('console');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const cyrpto = require('crypto');
+const crypto = require('crypto');
 const authMiddleware = require('../middlewares/authMiddleware')
 const authorizeRoles = require('../middlewares/authorizeRoles');
 const { OAuth2Client } = require('google-auth-library');
@@ -19,7 +19,6 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
-
     const newUser = new User({
       username,
       email,
@@ -121,7 +120,7 @@ router.post('/forgot-password', async (req, res) => {
         }
 
         // Create reset token.
-        const resetToken = cyrpto.randomBytes(32).toString('hex');
+        const resetToken = crypto.randomBytes(32).toString('hex');
         user.verificationToken = resetToken;
         await user.save();
 
