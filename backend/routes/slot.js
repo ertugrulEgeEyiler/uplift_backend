@@ -117,21 +117,44 @@ router.get('/my', authMiddleware, async (req, res) => {
 });
 router.get('/therapist/:id', async (req, res) => {
   try {
-    const slots = await Slot.find({ therapist: req.params.id });
+    // Fetch slots
+    const slots = await Slot.find({ 
+      therapist: req.params.id,
+      // Only include future or today's slots
+      date: { $gte: new Date().toISOString().split('T')[0] }
+    }).sort({ date: 1, startTime: 1 });
 
-    const formatted = slots.map(slot => ({
-      title: slot.status === 'booked' ? 'Booked Appointment' : 'Available Slot',
-      start: new Date(`${slot.date.toISOString().split('T')[0]}T${slot.startTime}:00`),
-      end: new Date(`${slot.date.toISOString().split('T')[0]}T${slot.endTime}:00`),
-      status: slot.status // 👈 bunu ekliyoruz ki frontend kontrol edebilsin
-    }));
+    // Check if there are appointments for these slots to determine status
+    const appointmentPromises = slots.map(async (slot) => {
+      const appointment = await Appointment.findOne({ 
+        slot: slot._id,
+        status: 'booked'
+      });
+      
+      return {
+        id: slot._id,
+        title: appointment ? 'Booked Appointment' : 'Available Slot',
+        // Create proper date objects from date and time strings
+        start: new Date(`${slot.date.toISOString().split('T')[0]}T${slot.startTime}:00`),
+        end: new Date(`${slot.date.toISOString().split('T')[0]}T${slot.endTime}:00`),
+        status: appointment ? 'booked' : 'available',
+        slotInfo: {
+          type: slot.type,
+          mode: slot.mode,
+          price: slot.price,
+          maxParticipants: slot.maxParticipants
+        }
+      };
+    });
 
-    res.status(200).json(formatted);
+    // Resolve all promises
+    const formattedSlots = await Promise.all(appointmentPromises);
+    
+    res.status(200).json(formattedSlots);
   } catch (error) {
     console.error('Therapist slots fetch error:', error);
     res.status(500).json({ message: 'Server Error!' });
   }
 });
-
 
 module.exports = router;
