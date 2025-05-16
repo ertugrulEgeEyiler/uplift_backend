@@ -3,23 +3,40 @@ const jwt = require('jsonwebtoken');
 
 let io;
 
-function initSocket(server) {
-  io = new Server(server, {
-    cors: { origin: '*' },
+function initSocket(server) {  io = new Server(server, {
+    cors: {
+      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      methods: ["GET", "POST"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true
+    },
     pingTimeout: 60000,
     pingInterval: 25000,
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
   });
-
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth.token;
-      if (!token) return next(new Error('Authentication error'));
+      if (!token) {
+        console.log('Socket authentication failed: No token provided');
+        return next(new Error('Authentication error: No token provided'));
+      }
       
       const decoded = jwt.verify(token, "jwt_secret_key");
+      if (!decoded || !decoded.id) {
+        console.log('Socket authentication failed: Invalid token');
+        return next(new Error('Authentication error: Invalid token'));
+      }
+
       socket.userId = decoded.id;
+      console.log('Socket authenticated for user:', decoded.id);
       next();
     } catch (err) {
-      next(new Error('Authentication error'));
+      console.error('Socket authentication error:', err);
+      next(new Error(`Authentication error: ${err.message}`));
     }
   });
 
