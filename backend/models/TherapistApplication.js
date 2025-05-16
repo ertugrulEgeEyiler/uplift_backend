@@ -15,6 +15,8 @@ const TherapistApplicationSchema = new mongoose.Schema({
     certificateUrl: { type: String },
     approved: { type: Boolean, default: false },
     rejected: { type: Boolean, default: false },
+    ratingAverage: { type: Number, default: 0 }, // New field for average rating
+    ratingCount: { type: Number, default: 0 }   // New field for count of ratings
 }, { timestamps: true })
 
 module.exports = mongoose.model('TherapistApplication', TherapistApplicationSchema)

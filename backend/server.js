@@ -17,6 +17,7 @@ const slotRoutes = require("./routes/slot");
 const appointmentRoutes = require("./routes/appointment");
 const paymentRoutes = require('./routes/payment');
 const progressRoutes = require('./routes/progress');
+const ratingRoutes = require('./routes/rating'); // New rating routes
 
 app.use('/api/progress', progressRoutes);
 app.use("/api/auth", authRoutes);
@@ -28,6 +29,7 @@ app.use("/api/slot", slotRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use('/api/payment', paymentRoutes);
+app.use('/api/ratings', ratingRoutes); // Add rating routes
 
 
 
