@@ -30,8 +30,7 @@ app.use("/api/appointments", appointmentRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use('/api/payment', paymentRoutes);
 app.use('/api/ratings', ratingRoutes); // Add rating routes
-
-
+app.use('/uploads', express.static('uploads'));
 
 mongoose
   .connect(
